@@ -4,12 +4,12 @@ import urllib.request
 from html.parser import HTMLParser
 from lxml import etree, html
 import re
-import os
+import pathlib
 
 REMOTE_ADDRESS = "https://news.ycombinator.com"
 LOCAL_PORT = 8232
 LOCAL_ADDRESS = "http://127.0.0.1:" + str(LOCAL_PORT)
-TMP_FILENAME = "tmp_output"
+TMP_FILE = pathlib.Path("tmp_output")
 
 
 def tmify(string):
@@ -56,8 +56,8 @@ class MyProxy(http.server.SimpleHTTPRequestHandler):
                     if tag.tail:
                         tag.tail = tmify(tag.tail)
             element_tree = etree.ElementTree(tree)
-            element_tree.write(TMP_FILENAME, method="html", pretty_print=True)
-            self.copyfile(open(TMP_FILENAME, "rb"), self.wfile)
+            element_tree.write(TMP_FILE, method="html", pretty_print=True)
+            self.copyfile(open(TMP_FILE, "rb"), self.wfile)
 
 
 httpd = socketserver.ForkingTCPServer(("", LOCAL_PORT), MyProxy)
@@ -65,6 +65,6 @@ try:
     httpd.serve_forever()
 except KeyboardInterrupt:
     httpd.shutdown()
-    os.remove(TMP_FILENAME)
+    TMP_FILE.unlink(missing_ok=True)
 
 # httpd.handle_request()
