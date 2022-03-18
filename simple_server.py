@@ -12,6 +12,20 @@ LOCAL_ADDRESS = "http://127.0.0.1:" + str(LOCAL_PORT)
 TMP_FILENAME = "tmp_output"
 
 
+def tmify(string):
+    """
+    Function to add ™ after every 6-letter word
+    :param string: String to modify
+    :return: Modified string
+    """
+    return re.sub(
+        # pretty self-explanatory
+        r"(\W|^)(\w{6})(\s|$|\W(\W|$))",
+        r"\1\2™\3",
+        string,
+    )
+
+
 class MyProxy(http.server.SimpleHTTPRequestHandler):
     """
     Class to serve remote pages, adding ™ after every 6-letter word.
@@ -26,7 +40,9 @@ class MyProxy(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.end_headers()
 
-            if re.search(r"(.css|.gif|.ico)($|\?)", url):
+            # it is probably better to check content-type header,
+            # but regexeps are fun
+            if re.search(r"(.css|.gif|.ico|.js)($|\?)", url):
                 self.copyfile(response, self.wfile)
                 return
 
@@ -34,13 +50,11 @@ class MyProxy(http.server.SimpleHTTPRequestHandler):
             hp = etree.HTMLParser(encoding="utf-8")
             tree = html.fromstring(response_content, parser=hp)
             for tag in tree.iter():
-                if tag.text and tag.tag in set(("span", "div", "p", "i", "b")):
-                    tag.text = re.sub(
-                        # pretty self-explanatory
-                        r"(\W|^)(\w{6})(\s|(\W\W)|$)",
-                        r"\g<1>\g<2>™\g<3>",
-                        tag.text,
-                    )
+                if tag.tag in set(("span", "div", "p", "i", "b", "a")):
+                    if tag.text:
+                        tag.text = tmify(tag.text)
+                    if tag.tail:
+                        tag.tail = tmify(tag.tail)
             element_tree = etree.ElementTree(tree)
             element_tree.write(TMP_FILENAME, method="html", pretty_print=True)
             self.copyfile(open(TMP_FILENAME, "rb"), self.wfile)
@@ -49,7 +63,7 @@ class MyProxy(http.server.SimpleHTTPRequestHandler):
 httpd = socketserver.ForkingTCPServer(("", LOCAL_PORT), MyProxy)
 try:
     httpd.serve_forever()
-except Exception:
+except KeyboardInterrupt:
     httpd.shutdown()
     os.remove(TMP_FILENAME)
 
