@@ -60,11 +60,10 @@ class MyProxy(http.server.SimpleHTTPRequestHandler):
             self.copyfile(open(TMP_FILE, "rb"), self.wfile)
 
 
-httpd = socketserver.ForkingTCPServer(("", LOCAL_PORT), MyProxy)
-try:
-    httpd.serve_forever()
-except KeyboardInterrupt:
-    httpd.shutdown()
-    TMP_FILE.unlink(missing_ok=True)
-
-# httpd.handle_request()
+if __name__ == "__main__":
+    httpd = socketserver.ForkingTCPServer(("", LOCAL_PORT), MyProxy)
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        httpd.shutdown()
+        TMP_FILE.unlink(missing_ok=True)
