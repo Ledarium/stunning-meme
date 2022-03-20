@@ -57,8 +57,12 @@ class MyProxy(http.server.SimpleHTTPRequestHandler):
                             tag.text = tmify(tag.text)
                         if tag.tail:
                             tag.tail = tmify(tag.tail)
+                        if href := tag.get("href"):
+                            tag.attrib["href"] = re.sub(
+                                REMOTE_ADDRESS, LOCAL_ADDRESS, href
+                            )
                 element_tree = etree.ElementTree(tree)
-                element_tree.write(TMP_FILE, method="html", pretty_print=True)
+                element_tree.write(str(TMP_FILE), method="html", pretty_print=True)
                 self.copyfile(open(TMP_FILE, "rb"), self.wfile)
         except urllib.error.HTTPError as exc:
             self.send_response(exc.code)
