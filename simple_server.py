@@ -40,7 +40,9 @@ class MyProxy(http.server.SimpleHTTPRequestHandler):
         try:
             with urllib.request.urlopen(f"{REMOTE_ADDRESS}/{url}") as response:
                 self.send_response(200)
-                self.send_header("Content-Type", response.headers["Content-Type"])
+                self.send_header(
+                    "Content-Type", response.headers["Content-Type"]
+                )
                 self.end_headers()
 
                 # it is probably better to check content-type header,
@@ -65,7 +67,9 @@ class MyProxy(http.server.SimpleHTTPRequestHandler):
                                 REMOTE_ADDRESS, LOCAL_ADDRESS, href
                             )
                 element_tree = etree.ElementTree(tree)
-                element_tree.write(str(TMP_FILE), method="html", pretty_print=True)
+                element_tree.write(
+                    str(TMP_FILE), method="html", pretty_print=True
+                )
                 self.copyfile(open(TMP_FILE, "rb"), self.wfile)
         except urllib.error.HTTPError as exc:
             self.send_response(exc.code)
