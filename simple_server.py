@@ -21,7 +21,7 @@ def tmify(string):
     """
     return re.sub(
         # pretty self-explanatory
-        r"(\W|^)(\w{6})(\s|$|\W(\W|$))",
+        r"(\W|^)(\w{6})(\s|$|[^a-zA-Z0-9_™](\W|$))",
         r"\1\2™\3",
         string,
     )
