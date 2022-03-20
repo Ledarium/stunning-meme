@@ -1,6 +1,7 @@
 import socketserver
 import http.server
 import urllib.request
+import urllib.error
 from html.parser import HTMLParser
 from lxml import etree, html
 import re
@@ -36,28 +37,33 @@ class MyProxy(http.server.SimpleHTTPRequestHandler):
         Do GET request and if it is plain html, process its content.
         """
         url = self.path[1:]
-        with urllib.request.urlopen(f"{REMOTE_ADDRESS}/{url}") as response:
-            self.send_response(200)
+        try:
+            with urllib.request.urlopen(f"{REMOTE_ADDRESS}/{url}") as response:
+                self.send_response(200)
+                self.end_headers()
+
+                # it is probably better to check content-type header,
+                # but regexeps are fun
+                if re.search(r"(.css|.gif|.ico|.js)($|\?)", url):
+                    self.copyfile(response, self.wfile)
+                    return
+
+                response_content = response.read()
+                hp = etree.HTMLParser(encoding="utf-8")
+                tree = html.fromstring(response_content, parser=hp)
+                for tag in tree.iter():
+                    if tag.tag in set(("span", "div", "p", "i", "b", "a")):
+                        if tag.text:
+                            tag.text = tmify(tag.text)
+                        if tag.tail:
+                            tag.tail = tmify(tag.tail)
+                element_tree = etree.ElementTree(tree)
+                element_tree.write(TMP_FILE, method="html", pretty_print=True)
+                self.copyfile(open(TMP_FILE, "rb"), self.wfile)
+        except urllib.error.HTTPError as exc:
+            self.send_response(exc.code)
             self.end_headers()
-
-            # it is probably better to check content-type header,
-            # but regexeps are fun
-            if re.search(r"(.css|.gif|.ico|.js)($|\?)", url):
-                self.copyfile(response, self.wfile)
-                return
-
-            response_content = response.read()
-            hp = etree.HTMLParser(encoding="utf-8")
-            tree = html.fromstring(response_content, parser=hp)
-            for tag in tree.iter():
-                if tag.tag in set(("span", "div", "p", "i", "b", "a")):
-                    if tag.text:
-                        tag.text = tmify(tag.text)
-                    if tag.tail:
-                        tag.tail = tmify(tag.tail)
-            element_tree = etree.ElementTree(tree)
-            element_tree.write(TMP_FILE, method="html", pretty_print=True)
-            self.copyfile(open(TMP_FILE, "rb"), self.wfile)
+            self.wfile.write(exc.fp.read())
 
 
 if __name__ == "__main__":
