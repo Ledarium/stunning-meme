@@ -40,6 +40,7 @@ class MyProxy(http.server.SimpleHTTPRequestHandler):
         try:
             with urllib.request.urlopen(f"{REMOTE_ADDRESS}/{url}") as response:
                 self.send_response(200)
+                self.send_header("Content-Type", response.headers["Content-Type"])
                 self.end_headers()
 
                 # it is probably better to check content-type header,
@@ -48,8 +49,10 @@ class MyProxy(http.server.SimpleHTTPRequestHandler):
                     self.copyfile(response, self.wfile)
                     return
 
-                response_content = response.read()
-                hp = etree.HTMLParser(encoding="utf-8")
+                charset = response.info().get_content_charset()
+                response_content = response.read().decode(charset)
+                hp = etree.HTMLParser()
+
                 tree = html.fromstring(response_content, parser=hp)
                 for tag in tree.iter():
                     if tag.tag in set(("span", "div", "p", "i", "b", "a")):
